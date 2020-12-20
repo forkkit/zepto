@@ -19,8 +19,22 @@ type RouterHandler struct {
 }
 
 type Router struct {
-	options  routerOptions
-	handlers []RouterHandler
+	options    routerOptions
+	handlers   []RouterHandler
+	middleware MiddlewareStack
+}
+
+func NewRouter(path string, opts ...RouterOption) *Router {
+	options := newRouterOptions(path, opts...)
+	router := Router{
+		handlers: make([]RouterHandler, 0),
+		options:  options,
+		middleware: MiddlewareStack{
+			stack: make([]MiddlewareFunc, 0),
+			skips: nil,
+		},
+	}
+	return &router
 }
 
 type RouterOption func(*routerOptions)
@@ -42,13 +56,9 @@ func newRouterOptions(path string, opts ...RouterOption) routerOptions {
 }
 
 func (app *App) Router(path string, opts ...RouterOption) *Router {
-	options := newRouterOptions(path, opts...)
-	router := Router{
-		options:  options,
-		handlers: make([]RouterHandler, 0),
-	}
-	app.routers = append(app.routers, &router)
-	return &router
+	router := NewRouter(path, opts...)
+	app.routers = append(app.routers, router)
+	return router
 }
 
 func (router *Router) HandleMethod(methods []string, path string, routeHandler RouteHandler) *Router {
@@ -83,6 +93,10 @@ func (router *Router) Patch(path string, routeHandler RouteHandler) *Router {
 
 func (router *Router) Any(path string, routeHandler RouteHandler) *Router {
 	return router.HandleMethod([]string{"GET", "POST", "PUT", "DELETE", "PATCH"}, path, routeHandler)
+}
+
+func (router *Router) Use(mw ...MiddlewareFunc) {
+	router.middleware.Use(mw...)
 }
 
 func (app *App) registerRouterHandleFunc(router *Router, h RouterHandler, host *string) {
@@ -120,7 +134,10 @@ func (app *App) registerRouterHandleFunc(router *Router, h RouterHandler, host *
 				app.HandleError(res, req, e)
 			}
 		}()
-		h := app.middleware.handle(h.routeHandler)
+		// Apply Root Middlewares
+		h := app.rootRouter.middleware.handle(h.routeHandler)
+		// Apply Router (Scoped) Middlewares
+		h = router.middleware.handle(h)
 		err := h(ctx)
 		// Handle Controller Error
 		if err != nil {
