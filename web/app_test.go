@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/go-zepto/zepto/broker"
 	"github.com/go-zepto/zepto/logger/logrus"
 	"github.com/go-zepto/zepto/testutils"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 func CreateAppWithBrokerTest() (*App, *testutils.BrokerProviderMock) {
@@ -27,8 +28,8 @@ func CreateAppWithBrokerTest() (*App, *testutils.BrokerProviderMock) {
 
 func TestApp_NewApp(t *testing.T) {
 	app := NewApp()
-	if app.rootRouter == nil {
-		t.Errorf("app.rootRouter should not be nil")
+	if app.muxRouter == nil {
+		t.Errorf("app.muxRouter should not be nil")
 	}
 	if app.opts.tmplEngine == nil {
 		t.Errorf("app.opts.tmplEngine should not be nil")
@@ -96,8 +97,8 @@ func TestApp_Broker_Subscribe(t *testing.T) {
 func setupAppTest() *App {
 	app, _ := CreateAppWithBrokerTest()
 	app.opts.env = "development"
-	rootRouter := mux.NewRouter()
-	app.rootRouter = rootRouter
+	muxRouter := mux.NewRouter()
+	app.muxRouter = muxRouter
 	app.tmplEngine = &testutils.EngineMock{}
 	return app
 }
