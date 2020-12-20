@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"path"
+
 	"github.com/gorilla/mux"
 )
 
@@ -107,7 +109,7 @@ func (app *App) registerRouterHandleFunc(router *Router, h RouterHandler, host *
 		muxRouter = app.muxRouter.Host(*host).Subrouter()
 	}
 	routerPath := router.options.path
-	muxRouter.HandleFunc(routerPath+h.path, func(res http.ResponseWriter, req *http.Request) {
+	muxRouter.HandleFunc(path.Join(routerPath, h.path), func(res http.ResponseWriter, req *http.Request) {
 		ctx := NewDefaultContext()
 		ctx.logger = app.opts.logger
 		ctx.broker = app.opts.broker
